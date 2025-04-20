@@ -72,6 +72,8 @@ class PDFTextState:
 
     def __init__(self) -> None:
         self.font: Optional[PDFFont] = None
+        self.fontId = "F?"  #NSV
+        self.fontMap = {}  #NSV
         self.fontsize: float = 0
         self.charspace: float = 0
         self.wordspace: float = 0
@@ -1000,6 +1002,8 @@ class PDFPageInterpreter:
         """
         try:
             self.textstate.font = self.fontmap[literal_name(fontid)]
+            self.textstate.fontMap = self.fontmap    #NSV
+            self.textstate.fontId = literal_name(fontid)    #NSV
         except KeyError:
             if settings.STRICT:
                 raise PDFInterpreterError("Undefined Font id: %r" % fontid)

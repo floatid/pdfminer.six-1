@@ -10,6 +10,8 @@ from typing import (
     cast,
 )
 
+from pdfminer.psparser import literal_name
+
 from pdfminer import utils
 from pdfminer.pdfcolor import PDFColorSpace
 from pdfminer.pdffont import PDFFont, PDFUnicodeNotDefined
@@ -99,6 +101,11 @@ class PDFDevice:
 
 
 class PDFTextDevice(PDFDevice):
+    #NSV---
+    def __init__(self, _) -> None:
+        self.RtfHeader_Created = False
+    #---NSV
+
     def render_string(
         self,
         textstate: "PDFTextState",
@@ -109,6 +116,8 @@ class PDFTextDevice(PDFDevice):
         assert self.ctm is not None
         matrix = utils.mult_matrix(textstate.matrix, self.ctm)
         font = textstate.font
+        fontId = textstate.fontId   #NSV
+        fontMap = textstate.fontMap #NSV
         fontsize = textstate.fontsize
         scaling = textstate.scaling * 0.01
         charspace = textstate.charspace * scaling
@@ -124,6 +133,7 @@ class PDFTextDevice(PDFDevice):
                 matrix,
                 textstate.linematrix,
                 font,
+                fontId,     #NSV
                 fontsize,
                 scaling,
                 charspace,
@@ -134,11 +144,27 @@ class PDFTextDevice(PDFDevice):
                 graphicstate,
             )
         else:
+            if not self.RtfHeader_Created:
+                rtfHeader = r"{\rtf1\ansi\ansicpg936\uc1\deff0{\fonttbl"
+                for fnt in fontMap:
+                    #print(literal_name(fnt), "==>", fontMap[fnt])
+                    fntName = fontMap[fnt].basefont
+                    if len(fntName) > 6 and fntName[6] == '+':
+                        fntName = fntName[7:]
+                    rtfHeader += "\n{\\" + literal_name(fnt).lower() + "\\fmodern\\fcharset1 " + fntName + ";}"
+                rtfHeader += "}\n"
+                #print(rtfHeader)
+                lB = list([b'\x00' + bytes(ch, 'ANSI') for ch in rtfHeader])
+                #lB = list([b'\x00' + bytes(ch, 'ANSI') for ch in "test"])
+                textstate.linematrix = self.render_string_horizontal(lB, matrix, textstate.linematrix, font, "F?", fontsize, scaling, charspace, wordspace, rise, dxscale, ncs, graphicstate,)
+                self.RtfHeader_Created = True
+            #---NSV
             textstate.linematrix = self.render_string_horizontal(
                 seq,
                 matrix,
                 textstate.linematrix,
                 font,
+                fontId,     #NSV
                 fontsize,
                 scaling,
                 charspace,
@@ -155,6 +181,7 @@ class PDFTextDevice(PDFDevice):
         matrix: Matrix,
         pos: Point,
         font: PDFFont,
+        fontId: str,    #NSV
         fontsize: float,
         scaling: float,
         charspace: float,
@@ -177,6 +204,7 @@ class PDFTextDevice(PDFDevice):
                     x += self.render_char(
                         utils.translate_matrix(matrix, (x, y)),
                         font,
+                        fontId,     #NSV
                         fontsize,
                         scaling,
                         rise,
@@ -199,6 +227,7 @@ class PDFTextDevice(PDFDevice):
         matrix: Matrix,
         pos: Point,
         font: PDFFont,
+        fontId: str,   #NSV
         fontsize: float,
         scaling: float,
         charspace: float,
@@ -221,6 +250,7 @@ class PDFTextDevice(PDFDevice):
                     y += self.render_char(
                         utils.translate_matrix(matrix, (x, y)),
                         font,
+                        fontId,   #NSV
                         fontsize,
                         scaling,
                         rise,
@@ -241,6 +271,7 @@ class PDFTextDevice(PDFDevice):
         self,
         matrix: Matrix,
         font: PDFFont,
+        fontId: str,   #NSV
         fontsize: float,
         scaling: float,
         rise: float,

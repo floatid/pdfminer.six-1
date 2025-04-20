@@ -52,7 +52,6 @@ from pdfminer.utils import (
     Point,
     Rect,
     apply_matrix_pt,
-    apply_matrix_rect,
     bbox2str,
     enc,
     make_compat_str,
@@ -76,9 +75,12 @@ class PDFLayoutAnalyzer(PDFTextDevice):
         self.pageno = pageno
         self.laparams = laparams
         self._stack: List[LTLayoutContainer] = []
+        self.curFontId = "F?"
 
     def begin_page(self, page: PDFPage, ctm: Matrix) -> None:
-        (x0, y0, x1, y1) = apply_matrix_rect(ctm, page.mediabox)
+        (x0, y0, x1, y1) = page.mediabox
+        (x0, y0) = apply_matrix_pt(ctm, (x0, y0))
+        (x1, y1) = apply_matrix_pt(ctm, (x1, y1))
         mediabox = (0, 0, abs(x0 - x1), abs(y0 - y1))
         self.cur_item = LTPage(self.pageno, mediabox)
 
@@ -236,6 +238,7 @@ class PDFLayoutAnalyzer(PDFTextDevice):
         self,
         matrix: Matrix,
         font: PDFFont,
+        fontId: str,   #NSV
         fontsize: float,
         scaling: float,
         rise: float,
@@ -243,9 +246,19 @@ class PDFLayoutAnalyzer(PDFTextDevice):
         ncs: PDFColorSpace,
         graphicstate: PDFGraphicState,
     ) -> float:
+        text = ""
         try:
-            text = font.to_unichr(cid)
-            assert isinstance(text, str), str(type(text))
+            #text = font.to_unichr(cid) //NSV
+            #NSV---
+            if fontId != "F?":      # F? for RTF header
+                if self.curFontId != fontId:
+                    text = "\\" + fontId.lower()
+                    self.curFontId = fontId
+                text += r"\u" + str(cid) + "?"
+            else:
+                text += chr(cid)
+            #---NSV
+            #assert isinstance(text, str), str(type(text)) #NSV
         except PDFUnicodeNotDefined:
             text = self.handle_undefined_char(font, cid)
         textwidth = font.char_width(cid)
