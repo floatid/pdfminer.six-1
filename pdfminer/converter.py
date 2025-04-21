@@ -368,7 +368,7 @@ class TextConverter(PDFConverter[AnyIO]):
             elif isinstance(item, LTText):
                 self.write_text(item.get_text())
             if isinstance(item, LTTextBox):
-                self.write_text("\n")
+                self.write_text("\n\par")      #NSV # should I use \par or \pard ????
             elif isinstance(item, LTImage):
                 if self.imagewriter is not None:
                     self.imagewriter.export_image(item)
@@ -376,7 +376,7 @@ class TextConverter(PDFConverter[AnyIO]):
         if self.showpageno:
             self.write_text("Page %s\n" % ltpage.pageid)
         render(ltpage)
-        self.write_text("\f")
+        self.write_text("\page") #\f")      #NSV
 
     # Some dummy functions to save memory/CPU when all that is wanted
     # is text.  This stops all the image and drawing output from being
