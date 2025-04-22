@@ -239,6 +239,7 @@ class PDFLayoutAnalyzer(PDFTextDevice):
         matrix: Matrix,
         font: PDFFont,
         fontId: str,   #NSV
+        isUniFont:bool,#NSV
         fontsize: float,
         scaling: float,
         rise: float,
@@ -254,7 +255,11 @@ class PDFLayoutAnalyzer(PDFTextDevice):
                 if self.curFontId != fontId:
                     text = "\\" + fontId.lower()
                     self.curFontId = fontId
-                text += r"\u" + str(cid) + "?"
+                if isUniFont:
+                    cpVal = str(cid)
+                else:
+                    cpVal = font.to_unichr(cid)
+                text += r"\u" + cpVal + "?"
             else:
                 text += chr(cid)
             #---NSV

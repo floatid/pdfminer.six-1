@@ -32,7 +32,7 @@ if TYPE_CHECKING:
 PDFTextSeq = Iterable[Union[int, float, bytes]]
 
 logger = logging.getLogger(__name__)
-
+nfl = {}
 
 class PDFDevice:
     """Translate the output of PDFPageInterpreter to the output that is needed"""
@@ -103,7 +103,18 @@ class PDFDevice:
 class PDFTextDevice(PDFDevice):
     #NSV---
     def __init__(self, _) -> None:
-        self.RtfHeader_Created = False
+        
+        sNSVUtils = r'G:\projects\pyprojects\pdf\extractNthColmn.py'
+        sUniFontsConfigFile = r'H:\oldNSV\g\NSV\GoogleDrive\GoogleDriveBackup\Dev\AutoIt\T_Gid\gidFonts.cfg'
+        
+        with open(sNSVUtils, "r") as file:
+            code = compile(file.read(), sNSVUtils, 'exec')
+            exec(code)
+        
+        import  extractNthColmn
+        #utilsModule = globals()[NSVUtilsModule]
+        self.lUniFonts = extractNthColmn.extract_nTh_column(sUniFontsConfigFile, 2)
+        print(self.lUniFonts)
     #---NSV
 
     def render_string(
@@ -144,20 +155,23 @@ class PDFTextDevice(PDFDevice):
                 graphicstate,
             )
         else:
-            if not self.RtfHeader_Created:
-                rtfHeader = r"{\rtf1\ansi\ansicpg936\uc1\deff0{\fonttbl"
-                for fnt in fontMap:
-                    #print(literal_name(fnt), "==>", fontMap[fnt])
-                    fntName = fontMap[fnt].basefont
-                    if len(fntName) > 6 and fntName[6] == '+':
-                        fntName = fntName[7:]
-                    rtfHeader += "\n{\\" + literal_name(fnt).lower() + "\\fmodern\\fcharset1 " + fntName + ";}"
-                rtfHeader += "}\n"
-                #print(rtfHeader)
-                lB = list([b'\x00' + bytes(ch, 'ANSI') for ch in rtfHeader])
-                #lB = list([b'\x00' + bytes(ch, 'ANSI') for ch in "test"])
-                textstate.linematrix = self.render_string_horizontal(lB, matrix, textstate.linematrix, font, "F?", fontsize, scaling, charspace, wordspace, rise, dxscale, ncs, graphicstate,)
-                self.RtfHeader_Created = True
+            #NSV--
+            fntName = fontMap[fontId].basefont
+            if len(fntName) > 6 and fntName[6] == '+':
+                fntNameTrue = fntName[7:]
+            else:
+                fntNameTrue = fntName
+            if not fontId in nfl:
+                nfl[fontId] = fntNameTrue
+                print(nfl)
+            self.isUniFont = False
+            for fntName_1 in self.lUniFonts:
+                if fntNameTrue.startswith(fntName_1):
+                    self.isUniFont = True
+                    break
+            #lB = list([b'\x00' + bytes(ch, 'ANSI') for ch in rtfHeader])
+            #textstate.linematrix = self.render_string_horizontal(lB, matrix, textstate.linematrix, font, "F?", self.isUniFont, fontsize,
+            #                        scaling, charspace, wordspace, rise, dxscale, ncs, graphicstate,)
             #---NSV
             textstate.linematrix = self.render_string_horizontal(
                 seq,
@@ -165,6 +179,7 @@ class PDFTextDevice(PDFDevice):
                 textstate.linematrix,
                 font,
                 fontId,     #NSV
+                self.isUniFont,  #NSV
                 fontsize,
                 scaling,
                 charspace,
@@ -182,6 +197,7 @@ class PDFTextDevice(PDFDevice):
         pos: Point,
         font: PDFFont,
         fontId: str,    #NSV
+        isUniFont: bool,#NSV
         fontsize: float,
         scaling: float,
         charspace: float,
@@ -205,6 +221,7 @@ class PDFTextDevice(PDFDevice):
                         utils.translate_matrix(matrix, (x, y)),
                         font,
                         fontId,     #NSV
+                        isUniFont,  #NSV
                         fontsize,
                         scaling,
                         rise,

@@ -182,8 +182,14 @@ def extract_text(
             caching=caching,
         ):
             interpreter.process_page(page)
-
-        return output_string.getvalue()
+        #NSV---
+        from pdfminer.pdfdevice import nfl
+        
+        rtfHeader = r"{\rtf1\ansi\ansicpg936\uc1\deff0{\fonttbl"
+        for fntId, fntName in nfl.items():
+            rtfHeader += "\n{\\" + fntId.lower() + "\\fmodern\\fcharset1 " + fntName + ";}"
+        print(rtfHeader + "}\n\n")
+        return rtfHeader + "}\n\n" + output_string.getvalue() + '}'
 
 
 def extract_pages(
